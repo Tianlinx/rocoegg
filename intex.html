@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>洛克王国繁育组别查询</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { max-width: 800px; margin: 20px auto; padding: 0 15px; }
+        .pet-item { 
+            display: inline-block; margin: 4px 6px; padding: 4px 10px; 
+            background: #eef6ff; border-radius: 6px; font-size: 14px;
+        }
+        .pet-highlight {
+            background: #fff380 !important; font-weight: bold; border: 1px solid #ffc800;
+        }
+        .group-tag {
+            color: #1d72f1; font-weight: 600; cursor: pointer; 
+            text-decoration: underline;
+        }
+        .tab-btn { cursor: pointer; }
+    </style>
+</head>
+<body class="bg-slate-50">
+
+<div class="bg-white rounded-xl shadow p-5">
+    <h1 class="text-xl font-bold text-center text-blue-700 mb-4">洛克王国世界 · 繁育组别查询</h1>
+
+    <div class="flex gap-2 mb-4">
+        <button id="tab1" class="tab-btn flex-1 py-2 bg-blue-600 text-white rounded-lg font-medium">🔍 精灵搜索</button>
+        <button id="tab2" class="tab-btn flex-1 py-2 bg-gray-200 rounded-lg font-medium">📋 组别查看</button>
+    </div>
+
+    <div id="panel1" class="space-y-3">
+        <input type="text" id="search" placeholder="输入精灵名（如：燃薪虫、立方人、寒音蛇）"
+               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400">
+    </div>
+
+    <div id="panel2" class="space-y-3 hidden">
+        <select id="groupSelect" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none">
+            <option value="">-- 选择组别 --</option>
+            <option>植物组</option>
+            <option>动物组</option>
+            <option>昆虫组</option>
+            <option>两栖组</option>
+            <option>机械组</option>
+            <option>矿石组</option>
+            <option>拟人组</option>
+            <option>天空组</option>
+            <option>海洋组</option>
+            <option>妖精组</option>
+            <option>巨龙组</option>
+            <option>未知组</option>
+        </select>
+    </div>
+
+    <div id="result" class="mt-5 pt-4 border-t border-gray-100"></div>
+</div>
+
+<script>
+const groupToPets = {
+    "植物组": ["幽影树","蹦蹦花","幻影灵菇","蒲公英娃娃","伊贝粉粉","兽花蕾","奇丽花","菊花梨","怖哭菇","九幽菇","格兰球","燃薪虫","海枝枝"],
+    "动物组": ["魔力猫","音速犬","蹦床松鼠","电咩咩","巨噬针鼹","星光狮","花影羚羊","恶魔狼","尖嘴狐仙","针叶巡林","炽心勇狮","爵士鹿","皇家狮鹫","寒音蛇","裘卡","黑猫巫师","春花兔","火焰猿","怒目怂猫","壳栗丝鼠地鼠","白金独角兽","獠牙猪","白发路路","冰钻布鲁斯"],
+    "昆虫组": ["芊香巨角蛛","化蝶","花衣蝶","花魁蜂后","风滚暮虫","窃光蚊","燃薪虫","铠甲虫","邪眼巨魔","捕尘长绒","食尘短绒","陨星虫"],
+    "两栖组": ["海豹船长","水泡壳","卷胡巨獭","卡瓦重","鳗尾兽","游蛇魔使","嗜波螺","寒音蛇","石冠王蜥","翠顶夫人"],
+    "机械组": ["立方人","权杖","声波缇塔","机甲小子","圣剑","溯源钟","帕帕斯卡","波多西","迷迷箱怪"],
+    "矿石组": ["晶石蜗","记忆石","石冠王蜥","布克棱岩","罗隐","巨灵石","嗜波螺","仪式巨像"],
+    "拟人组": ["瞌睡王","魔草巫灵","朔夜伊芙","帅帅魔偶","健猫教练","雪巨人","绅士鸡","武者鸡","厉毒修萝","多灵主","暮星晨","怒目怂猫","火焰猿","格斗小五","格斗小六","格斗小八","白发路路","影狸","九幽菇"],
+    "天空组": ["鸭吉吉","岚鸟","翠顶夫人","黑羽夫人","花魁蜂后","魔眷鸟","锤头鹳","咔咔鸟","高脚鹬","班枭","皇家狮鹫","溯源钟","噼啪鸟","泥吼牙","火羽","星云旅者","翼龙","公平鸽","卷毛鸭","绅士鸡","多灵主","帕帕斯卡","彩蝶鲨","粉星仔","厉毒修萝"],
+    "海洋组": ["千棘盔","利灯鱼","彩蝶鲨","月亮砣","龙鱼","闪电鳗鱼","琉璃水母","里拉鳐","海枝枝","圆号鱼","果冻","深蓝鲸"],
+    "妖精组": ["嘟嘟锅","红绒十字","朔夜伊芙","叮叮恶魔","仪式巨像","帅帅魔偶","雪影娃娃","梦想三三","棋棋","卡拉波斯","粉星仔","黑猫巫师","小皮球","画精灵","书魔虫","梦悠悠","酷拉","雪灵","裘卡","立方人","格兰球","里拉鳐","幽影树","兽花蕾","春花兔","暮星晨","卡洛儿"],
+    "巨龙组": ["翼龙","龙鱼","伊兰亚龙","寂灭骨龙"],
+    "未知组": ["迪莫","绒仙子","疾光千兽","龙息帕尔","圣羽翼王","超能阿布","学院呱呱"]
+};
+
+const petGroups = {};
+for(const [g,pets] of Object.entries(groupToPets)) {
+    pets.forEach(p => {
+        if(!petGroups[p]) petGroups[p] = [];
+        if(!petGroups[p].includes(g)) petGroups[p].push(g);
+    })
+}
+
+let currentHighlightPet = "";
+let currentSelectedGroup = "";
+
+const tab1 = document.getElementById('tab1'), tab2 = document.getElementById('tab2');
+const panel1 = document.getElementById('panel1'), panel2 = document.getElementById('panel2');
+const search = document.getElementById('search');
+const result = document.getElementById('result');
+const groupSelect = document.getElementById('groupSelect');
+
+function switchToGroupTab() {
+    panel1.classList.add('hidden');
+    panel2.classList.remove('hidden');
+    tab1.classList.remove('bg-blue-600','text-white');
+    tab1.classList.add('bg-gray-200');
+    tab2.classList.add('bg-blue-600','text-white');
+    tab2.classList.remove('bg-gray-200');
+}
+
+window.goToGroup = function(groupName, petName) {
+    currentHighlightPet = petName;
+    currentSelectedGroup = groupName;
+    switchToGroupTab();
+    groupSelect.value = groupName;
+    renderGroupList(groupName);
+};
+
+function renderGroupList(groupName) {
+    if(!groupName) return;
+    currentSelectedGroup = groupName;
+    const pets = groupToPets[groupName];
+    let html = `<p class="font-bold text-lg mb-2">📋 ${groupName}（共${pets.length}只）</p>`;
+    html += `<div class="flex flex-wrap gap-1">`;
+    pets.forEach(pet => {
+        html += `<span class="pet-item ${pet === currentHighlightPet ? 'pet-highlight' : ''}">${pet}</span>`;
+    });
+    html += `</div>`;
+    if(groupName === "未知组") html += `<p class="mt-2 text-red-500">❌ 本组无法生蛋</p>`;
+    result.innerHTML = html;
+}
+
+search.addEventListener('input', function() {
+    const keyword = this.value.trim().toLowerCase();
+    if(!keyword) { result.innerHTML = ''; return; }
+    const matches = Object.keys(petGroups).filter(n => n.toLowerCase().includes(keyword));
+    if(matches.length === 0) { result.innerHTML = `<p class="text-red-500">未找到精灵</p>`; return; }
+    let html = '';
+    matches.forEach(pet => {
+        const groups = petGroups[pet];
+        const cant = groups.includes("未知组");
+        html += `<div class="mb-3 pb-2 border-b"><p class="font-bold">${pet}</p>`;
+        const gt = groups.map(g=>`<span class="group-tag" onclick="goToGroup('${g}','${pet}')">${g}</span>`).join(' / ');
+        html += `<p>📦 组别：${gt}</p>`;
+        if(cant) html += `<p class="text-red-500">❌ 无法生蛋</p>`;
+        else html += `<p>🤝 可配：${gt}｜子代随母亲</p>`;
+        html += `</div>`;
+    });
+    result.innerHTML = html;
+});
+
+groupSelect.addEventListener('change', function() {
+    currentHighlightPet = "";
+    renderGroupList(this.value);
+});
+
+tab1.addEventListener('click', () => {
+    panel2.classList.add('hidden');
+    panel1.classList.remove('hidden');
+    tab2.classList.remove('bg-blue-600');
+    tab1.classList.add('bg-blue-600','text-white');
+});
+
+tab2.addEventListener('click', () => {
+    panel1.classList.add('hidden');
+    panel2.classList.remove('hidden');
+    tab1.classList.remove('bg-blue-600');
+    tab2.classList.add('bg-blue-600','text-white');
+    if(currentSelectedGroup) renderGroupList(currentSelectedGroup);
+});
+</script>
+</body>
+</html>
